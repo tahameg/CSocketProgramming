@@ -19,6 +19,23 @@
 int run_server();
 int run_client();
 
+/// This function gets the prompt until reaches to a null character and 
+/// returns number of characters written including the null character. 
+/// Function guarantees to end with null character.
+int get_prompt(char* write_buffer, int max_buffer_size)
+{
+    char c;
+    int counter = 0;
+    while((c = getchar()) != '\n' && counter+1 < max_buffer_size)
+    {
+        write_buffer[counter++] = c;
+    }
+
+    write_buffer[counter++] = '\0';
+    return counter;
+}
+
+
 int main(){
     char mode;
 
@@ -56,6 +73,7 @@ int run_client()
     server_address.sin_port = htons(PORT);
     server_address.sin_addr.s_addr = INADDR_ANY;
 
+    printf("Connecting to the socket...\n");
     int connection_result = connect(network_socket, 
                                     (struct sockaddr *)&server_address, 
                                     sizeof(server_address));
@@ -66,11 +84,28 @@ int run_client()
         return connection_result;
     }
 
+    printf("Expecting messages...\n");
     char server_response[256];
-    recv(network_socket, &server_response, sizeof(server_response), 0);
+    char client_message[256];
+    
+    //remove the new line character.
+    get_prompt(client_message, sizeof(client_message));
+    
+    while(1)
+    {
+        recv(network_socket, &server_response, sizeof(server_response), 0);
+        printf("Server: %s\n", server_response);
+        
+        if(strcmp(server_response, "exit") == 0){
+            printf("Server concluded the transaction.\n");
+            break;
+        }
 
-    // print out the server's response
-    printf("%s", server_response);
+        get_prompt(client_message, sizeof(client_message));
+        printf("You: %s\n", client_message);
+
+        send(network_socket, &client_message, sizeof(client_message), 0);
+    }
 
     close(network_socket);
 
@@ -80,6 +115,7 @@ int run_client()
 int run_server()
 {
     char server_message[256] = "You have reached the server!\n";
+    char client_response[256];
 
     // create the server socket
     int server_socket;
@@ -94,12 +130,40 @@ int run_server()
     //bind the socket to our specified IP and port
     bind(server_socket, (struct  sockaddr*) &server_address, sizeof(server_address));
     listen(server_socket, 5);
+    printf("Started accepting connections...\n");
+
 
     int client_socket;
     client_socket = accept(server_socket, NULL, NULL);
-
-    send(client_socket, server_message, sizeof(server_message), 0);
     
+    send(client_socket, &server_message, sizeof(server_message), 0);
+    
+    //remove the new line character.
+    get_prompt(server_message, sizeof(server_message));
+
+    while(1)
+    {
+        //Wait for response from the client.
+        recv(client_socket, &client_response, sizeof(client_response), 0);
+        
+        //Print client's response.
+        printf("Client %d: %s\n", client_socket, client_response);
+
+        //Get the user's message.
+        get_prompt(server_message, sizeof(server_message));
+        
+        //Send the message
+        send(client_socket, &server_message, sizeof(server_message), 0);
+        
+        //Print the user's message
+        printf("You: %s\n", server_message);
+
+        if(strcmp(server_message, "exit") == 0)
+        {
+            break;
+        }
+    }
+
     close(server_socket);
     return 0;
 }
