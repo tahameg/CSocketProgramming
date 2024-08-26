@@ -11,6 +11,11 @@
 #define SERVER_MODE 'S'
 #define CLIENT_MODE 'C'
 
+#define RED_BOLD "\033[1;31m"
+#define BLUE_BOLD "\033[1;34m"
+#define RESET_STYLE "\033[0m"
+
+
 // Define constants
 #define BUFFER_SIZE 1024
 #define PORT 9002
@@ -93,8 +98,8 @@ int run_client()
     
     while(1)
     {
-        recv(network_socket, &server_response, sizeof(server_response), 0);
-        printf("Server: %s\n", server_response);
+        recv(network_socket, server_response, sizeof(server_response), 0);
+        printf(RED_BOLD"Server:"RESET_STYLE" %s\n", server_response);
         
         if(strcmp(server_response, "exit") == 0){
             printf("Server concluded the transaction.\n");
@@ -102,9 +107,9 @@ int run_client()
         }
 
         get_prompt(client_message, sizeof(client_message));
-        printf("You: %s\n", client_message);
+        printf(BLUE_BOLD"You:"RESET_STYLE" %s\n", client_message);
 
-        send(network_socket, &client_message, sizeof(client_message), 0);
+        send(network_socket, client_message, sizeof(client_message), 0);
     }
 
     close(network_socket);
@@ -136,7 +141,7 @@ int run_server()
     int client_socket;
     client_socket = accept(server_socket, NULL, NULL);
     
-    send(client_socket, &server_message, sizeof(server_message), 0);
+    send(client_socket, server_message, sizeof(server_message), 0);
     
     //remove the new line character.
     get_prompt(server_message, sizeof(server_message));
@@ -147,16 +152,16 @@ int run_server()
         recv(client_socket, &client_response, sizeof(client_response), 0);
         
         //Print client's response.
-        printf("Client %d: %s\n", client_socket, client_response);
+        printf(RED_BOLD"Client %d:"RESET_STYLE" %s\n", client_socket, client_response);
 
         //Get the user's message.
         get_prompt(server_message, sizeof(server_message));
         
         //Send the message
-        send(client_socket, &server_message, sizeof(server_message), 0);
+        send(client_socket, server_message, sizeof(server_message), 0);
         
         //Print the user's message
-        printf("You: %s\n", server_message);
+        printf(BLUE_BOLD"You:"RESET_STYLE"%s\n", server_message);
 
         if(strcmp(server_message, "exit") == 0)
         {
